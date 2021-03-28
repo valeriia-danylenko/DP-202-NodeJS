@@ -9,6 +9,7 @@ function isIn (char, array) {
   return false
 }
 
+
 function replaceAll(text, chars, replacement) {
   const newText = [];
   let currentIndex = 0;
@@ -28,13 +29,13 @@ function replaceAll(text, chars, replacement) {
 function iHateLoops(sentenses) {
   const secret = [];
   let k = 0;
-  while (k < sentenses.length) {
+  while (k < sentenses.length - 2) {
     sentenses[k].forEach(el => {
-      if (k + 1 < sentenses.length) {
-        secret.push(sentenses[k + 1][countWordLength(el)-1])
-      }
       k++;
+      secret.push(sentenses[k][countWordLength(el)-1])
     })
+    k++;
+    secret.push('.')
   }
   return secret;
 }
@@ -48,15 +49,17 @@ return count
 }
 
 function decodeText(text) {
-  const sentences = replaceAll(text, ['.', '!', '?'], '+').split(/[+][ ]?/)
-  if (!sentences[sentences.length -1]) {sentences.length -= 1;}
+  if (!text) return ''
+  const sentences = replaceAll(text, ['.', '!', '?'], '+').replace(/[+]$/, '').split('+ ')
   sentences.map((sentence, i, arr) => {
     return arr[i] = replaceAll(sentence, [',', ':', ';', '"'], '').split(' ');
   })
-  const secretText = iHateLoops(sentences).join(' ')
-  return secretText[0].toUpperCase() + secretText.slice(1).toLowerCase() + '.'
+  const secretText = iHateLoops(sentences).join(' ').split(' . ')
+  secretText.map((sen, i, arr) => {
+    arr[i] = (sen[0].toUpperCase() + sen.slice(1).toLowerCase()).replace(/[ .]{1,}$/, '') + '.'})
+  return secretText.join(' ')
 }
 
 
-// const text = 'Yesterday, we bumped into Laura. It had to happen, but you can\'t deny the timing couldn\'t be worse! The "mission" to try and seduce her was a complete failure last month! By the way, she still has the ring I gave her. Anyhow, it hasn\'t been a pleasurable experience to go through it. I wanted to feel done with it first.'
-// console.log(decodeText(text))
+const text = 'Yesterday, we bumped into Laura. It had to happen, but you can\'t deny the timing couldn\'t be worse! The "mission" to try and seduce her was a complete failure last month! By the way, she still has the ring I gave her. Anyhow, it hasn\'t been a pleasurable experience to go through it. I wanted to feel done with it first. Yesterday, we bumped into Laura. It had to happen, but you can\'t deny the timing couldn\'t be worse! The "mission" to try and seduce her was a complete failure last month! By the way, she still has the ring I gave her. Anyhow, it hasn\'t been a pleasurable experience to go through it. I wanted to feel done with it first.'
+console.log(decodeText(text))
