@@ -10,7 +10,7 @@ function validation(arr, res) {
 }
 
 
-function hashPractice(arr, res) {
+function whyDoesItWork(arr, res) {
   if (!validation(arr, res)) return 'Nope'
   const sum = arr.reduce((acc, el) => acc + el);
   const diff = arr.reduce((acc, el) => acc - el);
@@ -43,5 +43,5 @@ function hashPractice(arr, res) {
 }
 
 // const arr = [1, 3, 4, 6, 8]
-// // hashPractice([5, 7, 8, 2], 2)
-// console.log(hashPractice(arr, -2))
+// // whyDoesItWork([5, 7, 8, 2], 2)
+// console.log(whyDoesItWork(arr, -2))
