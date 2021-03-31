@@ -48,89 +48,56 @@ const arrows = {
   times: 0,
 }
 
+function spinner (...args) {
+  args[0].id = setInterval((a)=> {
+    [obj, numRepeats, min, fn, circular] = a;
+    if (circular) {
+        if (obj.times == numRepeats) obj.times = min;
+        obj.times++
+    } else {
+      if (obj.times ==  numRepeats) obj.reverse = true;
+      else if (obj.times == min) obj.reverse = false;
+      obj.reverse ? obj.times-- : obj.times++
+    }
+    console.clear()
+    fn(obj, numRepeats, min);
+  }, 300, args)
+}
 
-//unsuccessful attempt to creat a decorator :( python version
-// function decorator(obj) {
-//   function inner(fn) {
-//     function wrapper(...args) {
-//       let [numRepeats, min] = args
-//       obj.id = setInterval((numRepeats, min) => {
-//       if (obj.times == numRepeats) {
-//         obj.reverse = true;
-//       } else if (obj.times == min) {
-//         obj.reverse = false
-//       }
-//       obj.reverse ? obj.times-- : obj.times++
-//       fn(obj);
-//AAAAAAAAAAAAAAAAAAAAAAAAAAAA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//     }, 300, obj)
-//     }
-//   }
-// }
-//
-// @decorator
-// function horizontalBlocks (obj) {
-//   console.clear();
-//   console.log(obj.char.repeat(obj.times))
-// }
-
-
-//1
-blocks.id = setInterval((obj)=> {
-  if (obj.times == 5) {obj.reverse = true;}
-  else if (obj.times == 1) {obj.reverse = false }
-obj.reverse ? obj.times-- : obj.times++
-  console.clear();
+function horizontalBlocks (...args) {
+  [obj] = args
   console.log(obj.char.repeat(obj.times))
-}, 300, blocks)
+}
 
-//2
-blocks.id = setInterval((obj)=> {
-  if (obj.times == 5) {obj.reverse = true;}
-  else if (obj.times == 1) {obj.reverse = false;}
-obj.reverse ? obj.times-- : obj.times++
-  console.clear();
-  console.log(`\n`.repeat(5-obj.times),`\n${obj.char}`.repeat(obj.times))
-}, 300, blocks)
+function verticalBlocks (...args) {
+  [obj, numRepeats] = args
+  console.log(`\n`.repeat(numRepeats-obj.times),`\n${obj.char}`.repeat(obj.times))
+}
 
-//3
-triangles.id = setInterval((obj)=> {
-  if (obj.times == 4) {obj.reverse = true;}
-  else if (obj.times == 0) {obj.reverse = false;}
-  obj.reverse ? obj.times-- : obj.times++
-  console.clear();
-  console.log(`${obj.char1.repeat(obj.times)}${obj.char2.repeat(4-obj.times)}`)
-}, 300, triangles)
+function triangesSpin(...args) {
+    [obj, numRepeats] = args;
+    console.log(`${obj.char1.repeat(obj.times)}${obj.char2.repeat(numRepeats-obj.times)}`);
+}
 
-// 4
-squares.id = setInterval((obj)=> {
-  if (obj.times == 5) {obj.times = 0;}
-  console.clear();
-  console.log(`${obj.char.repeat(obj.times)}`)
-  obj.times++
-}, 300, squares)
+function squaresSpin(...args) {
+    [obj] = args
+    console.log(`${obj.char.repeat(obj.times)}`);
+}
 
-// 5
-equal.id = setInterval((obj)=> {
-  if (obj.times == 5) { obj.reverse = true;}
-  else if (obj.times == 0) {obj.reverse = false;}
-  obj.reverse ? obj.times-- : obj.times++
-  console.clear();
-  console.log(`[ ${'  '.repeat(5-obj.times)}${obj.char.repeat(obj.times)} ]`)
-}, 300, equal)
+function equalSpin(...args) {
+    [obj, numRepeats] = args
+    console.log(`[ ${'  '.repeat(numRepeats-obj.times)}${obj.char.repeat(obj.times)} ]`)
+}
 
-// 6
-bigSquares.id = setInterval((obj)=> {
-  if (obj.times == 3) {obj.times = 0}
-  obj.times++
-  console.clear();
-  console.log(obj[`char${obj.times}`])
-}, 300, bigSquares)
+function displayChars(...args){
+    [obj] = args
+    console.log(obj[`char${obj.times}`])
+}
 
-// 7
-arrows.id = setInterval((obj)=> {
-  if (obj.times == 8) {obj.times = 0}
-  obj.times++
-  console.clear();
-  console.log(obj[`char${obj.times}`])
-}, 300, arrows)
+spinner (obj=blocks, numRepeats=5,  min=1, fn=horizontalBlocks, circular=false)
+spinner (obj=blocks, numRepeats=5,  min=1, fn=verticalBlocks, circular=false)
+spinner (obj=triangles, numRepeats=4,  min=0, fn=triangesSpin, circular=false)
+spinner (obj=squares, numRepeats=5,  min=-1, fn=squaresSpin, circular=true)
+spinner (obj=equal, numRepeats=5,  min=0, fn=equalSpin, circular=false)
+spinner (obj=bigSquares, numRepeats=3,  min=0, fn=displayChars, circular=true)
+spinner (obj=arrows, numRepeats=8,  min=0, fn=displayChars, circular=true)
