@@ -45,7 +45,7 @@ function chessBoard(...args) {
   }
   return board
 }
-// console.log(6,6, '*')
+
 
 // export const task1 = chessBoard;
 module.exports = chessBoard;
