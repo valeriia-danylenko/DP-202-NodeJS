@@ -3,17 +3,17 @@ const fs = require('fs');
 
 class OrdersViews {
     messages = {
-        ok: { status: 'ok', data: [], message: 'Thank you for your order' },
-        errorUser: { status: 'error', data: [], message: 'User info is not valid' },
-        errorData: { status: 'error', data: [], message: 'Invalid order data' },
-        errorProducts: { status: 'error', data: [], message: 'Products are not found' },
-        errorAvailability: { status: 'error', data: [], message: 'Not enough products' }
+        ok: { status: 'ok', data: [], message: 'Thank you for your order' }
+        // errorUser: { status: 'error', data: [], message: 'User info is not valid' },
+        // errorData: { status: 'error', data: [], message: 'Invalid order data' },
+        // errorProducts: { status: 'error', data: [], message: 'Products are not found' },
+        // errorAvailability: { status: 'error', data: [], message: 'Not enough products' }
     }
 
     async sendData(res, info) {
         const { status, data } = info;
-        this.messages[`${status}`].data = data;
-        this.messages.ok.data = [];
+        // this.messages[`${status}`].data = data;
+        // this.messages.ok.data = [];
         res.json(this.messages[`${status}`]);
         
         if (status === 'ok') {
