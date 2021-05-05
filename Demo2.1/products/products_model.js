@@ -1,27 +1,26 @@
-const DatabasePool = require('./pool_model.js');
+const DatabasePool = require('../common/other/pool_model');
 
 class ProductsModel extends DatabasePool {
 
-    validateCategories(categories) {
-        let validCategories = [];
-        if (categories) {
-            validCategories = categories.split(',').filter(category => Number(category));
-        }
-        return validCategories;
-    }
+    // validateCategories(categories) {
+    //     let validCategories = [];
+    //     if (categories) {
+    //         validCategories = categories.split(',').filter(category => Number(category));
+    //     }
+    //     return validCategories;
+    // }
 
     createWhereQuery(query) {
 
         let { categories, products, manufactures } = query;
-        const validCategories = this.validateCategories(categories);
-
+        // const validCategories = this.validateCategories(categories);
         let whereQuery = '';
         if (Object.keys(query).length === 0) return whereQuery;
-        if (validCategories.length > 0 || products || manufactures) {
+        if (categories  || products || manufactures) {
             const queryArr = [];
-            if (validCategories.length > 0) {
+            if (categories) {
                 const categoryQuery = '';
-                queryArr.push(categoryQuery.concat('category_id IN (', validCategories.join(', '), ')'));
+                queryArr.push(categoryQuery.concat('category_id IN (', categories.split(',').join(', '), ')'));
             }
             if (products) {
                 queryArr.push(`UPPER(name) LIKE '%${products.toUpperCase()}%'`);
@@ -49,7 +48,7 @@ class ProductsModel extends DatabasePool {
     }
 
     async selectProductDetails(id) {
-        if (!Number(id)) return [];
+        // if (!Number(id)) return [];
         const selector = `
             SELECT products.id, name, manufacture, category, units, price, img_link, ingridients
             FROM products 
