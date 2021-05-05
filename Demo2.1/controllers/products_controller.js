@@ -1,5 +1,5 @@
-const productsModel = require('./products_model');
-const productsViews = require('./products_views');
+const productsModel = require('../models/products_model');
+const productsViews = require('../views/products_views');
 
 class ProductsController {
     async selectAllProducts (req, res){
