@@ -1,9 +1,10 @@
+const NotFoundData = require('../common/errors/not_found_data');
+
 class ProductsViews {
     messages = {
-        ok: { status: 'ok', data: [], message: '' },
-        errorOk: { status: 'ok', data: [], message: 'Products are not found' },
-        errorProducts: { status: 'error', data: [], message: 'Products are not found' },
-        errorId: { status: 'error', data: [], message: 'Products is not found' }
+        errorId : 'Product is not found',
+        errorProducts: 'Products are not found',
+        ok: { success: true, data: [], message: '' },
     }
 
     writeMessage(data, type, ...id) {
@@ -11,18 +12,16 @@ class ProductsViews {
             this.messages.ok.data = data;
             return this.messages.ok;
         }
+
         switch (type) {
             case 'id':
-                this.messages.errorId.data = [{ 'id': id[0] }];
-                return this.messages.errorId;
-            case 'search':
-                this.messages.errorOk.data = data
-                return this.messages.errorOk;
-            case 'all':
-                this.messages.errorProducts.data = data
-                return this.messages.errorProducts;
+                throw new NotFoundData([{ 'id': id[0] }], this.messages.errorId);
+            // case 'search':
+            //     throw new CustomError(data, this.messages.errorProducts);
+            // case 'all':
+            //     throw new CustomError(data, this.messages.errorProducts);
             default:
-                return  this.messages.errorProducts;
+                throw new NotFoundData(data, this.messages.errorProducts);
         }
     }
 

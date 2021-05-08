@@ -1,37 +1,23 @@
-const DatabasePool = require('../common/other/pool_model');
+const db = require('../db/models/index');
+const { Op } = require('sequelize');
 
-class OrdersModel extends DatabasePool {
-    validateUser(user) {
-        const { name, phone, email } = user;
-        const validValues = {
-            name: /^[A-Za-z ]{2,30}$/g,
-            phone: /^[0-9]{12}$/g,
-            email: /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g
-        };
-        user.name = name.match(validValues.name) ? name.match(validValues.name)[0] : false;
-        user.phone = phone.match(validValues.phone) ? phone.match(validValues.phone)[0] : false;
-        user.email = null;
-        if (email) {
-            user.email = email.match(validValues.email) ? email.match(validValues.email)[0] : null;
-        }
-        return user
-    }
-
-    validateProductsArr(products) {
-        const invalidProducts = products.filter(product => {
-            return typeof product.id !== 'number' || typeof product.count !== 'number' || product.id <= 0 || product.count <= 0
-        })
-        return invalidProducts
-    }
+class OrdersModel {
 
     async retrieveIdAmount(products) {
         const ids = products.map(el => el.id);
         const idQuery = `WHERE id IN ( ${ids.join(', ')} )`;
-        const { rows } = await this.pool.query(`
-            SELECT id, amount FROM products
-            ${idQuery};`);
-        return rows
-    }
+
+        const rawProducts = await db.Product.findAll({
+            attributes: ['id', 'amount'],
+            where: {
+                id: {
+                    [Op.in]: ids
+                }
+            }
+        });
+        const foundProducts = rawProducts.map(p => p.dataValues)
+        return foundProducts
+    };
 
     async checkIdExists(products, rows) {
         const foundIds = rows.map(product => product.id);
@@ -51,122 +37,116 @@ class OrdersModel extends DatabasePool {
         return notEnoughProducts
     }
 
-    async searchUser(phone) {
-        const selector = `
-            SELECT id, user_name, phone, password, email
-            FROM users
-            WHERE phone = '${phone}';`;
-        const { rows } = await this.pool.query(selector);
-        return rows;
+
+    async findUserByPhone(phoneNum) {
+        const rawUser = await db.User.findAll({
+            attributes: ['id', 'user_name', 'phone', 'password', 'email'],
+            where: {
+                phone: phoneNum
+            }
+        });
+        const user = rawUser.map(u => u.dataValues);
+        return user;
     }
 
     async inserOrderItems(products, id) {
         const queryArr = products.reduce((acc, product) => {
-            acc.push(`( ${id}, ${product.id}, ${product.count} )`);
+            console.log({ order_id: id, product_id: product.id, amount: product.count })
+            acc.push({ order_id: id, product_id: product.id, amount: product.count })
             return acc;
         }, []);
-        await this.pool.query(`
-            INSERT INTO order_items (order_id, product_id, amount)
-            VALUES ${queryArr.join(', ')};`);
+        await db.Order_item.bulkCreate(queryArr);
     }
+
 
     async insertOrder(user, products) {
         const { id } = user;
-        
-        // const foundUser = await (this.searchUser(phone));
-        // const newUser = (foundUser.length === 0);
-        // if (newUser) {
-        //     await this.pool.query(
-        //         `INSERT INTO users (user_name, phone, email)
-        //         VALUES ('${name}', '${phone}', '${email}');`);
-        // };
-        // const order = await this.pool.query(
-        //     `INSERT INTO orders (user_id)
-        //     VALUES ((SELECT id
-        //     FROM users
-        //     WHERE phone = '${phone}'))
-        //     RETURNING id;`);
-
-        const order = await this.pool.query(
-            `INSERT INTO orders (user_id)
-            VALUES (${id})
-            RETURNING id;`);
-
-        const orderID = order.rows[0].id;
+        const order = await db.Order.create({
+            user_id: id
+        });
+        const orderID = order.dataValues.id
         await this.inserOrderItems(products, orderID);
         return orderID;
+
     }
 
     async selectOrderInfo(orderID) {
-        const userQuery = `
-            SELECT user_name, phone, email, time
-            FROM orders
-            JOIN users ON orders.user_id = users.id
-            WHERE orders.id = ${orderID};`
 
-        const orderQuery = `
-            SELECT order_id, product_id, products.name, order_items.amount, units, price, price*order_items.amount AS total_per_item
-            FROM order_items
-            JOIN products ON order_items.product_id = products.id
-            JOIN units on products.units_id = units.id
-            WHERE order_id = ${orderID}`
+        const user = await db.Order.findOne({
+            attributes: [
+                [db.Sequelize.literal('"user"."user_name"'), 'user_name'],
+                [db.Sequelize.literal('"user"."phone"'), 'phone'],
+                [db.Sequelize.literal('"user"."email"'), 'email'],
+                'time'
+            ],
+            where: { id: orderID },
+            include: [
+                {
+                    model: db.User,
+                    as: 'user',
+                    attributes: []
+                }
+            ]
+        });
 
-        const totalQuery = `
-            SELECT SUM(price*order_items.amount)
-            FROM products
-            JOIN order_items ON product_id = products.id
-            WHERE order_id = ${orderID};`
+        const rawOrder = await db.Order_item.findAll({
+            attributes: [
+                'order_id',
+                'product_id',
+                [db.Sequelize.literal('product.name'), 'name'],
+                'amount',
+                [db.Sequelize.literal('"product->unit"."units"'), 'units'],
+                [db.Sequelize.literal('"product"."price"'), 'price'],
+                [db.Sequelize.literal('"product"."price" * order_item.amount'), 'total_per_item']
+            ],
+            where: { order_id: orderID },
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: [],
+                    include: [
+                        {
+                            model: db.Unit,
+                            as: 'unit',
+                            attributes: [],
+                        }
+                    ]
+                }
+            ]
+        });
+        const order = rawOrder.map(el => el.dataValues);
 
-        const user = await this.pool.query(userQuery)
-        user.rows[0].time = new Date(user.rows[0].time).toLocaleString()
-        const order = await this.pool.query(`${orderQuery};`)
-        const total = await this.pool.query(totalQuery);
+        const total = await db.Order_item.findOne({
+            attributes: [
+                [db.sequelize.fn('sum', db.Sequelize.literal('"product"."price" * order_item.amount')), 'total_amount']
+            ],
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: []
+                }
+            ],
+            group: ['order_id'],
+            having: { order_id: orderID }
+        });
 
         const orderInfo = {
-            'user': user.rows[0],
-            'order': order.rows,
-            'total': total.rows[0].sum
+            'user': user.dataValues,
+            'order': order,
+            'total': total.dataValues.total_amount
         };
         return orderInfo
     }
 
     async completeOrder(user, products) {
-        const msg = { status: 'ok', data: [] }
-
-        //     const validatedUser = this.validateUser(user);
-        //     if (!validatedUser.name || !validatedUser.phone) {
-        //         msg.status = 'errorUser';
-        //         return msg;
-        //     }
-
-        //     const invalidProducts = this.validateProductsArr(products);
-        //     if (products.length === 0 || invalidProducts.length > 0) {
-        //         msg.status = 'errorProducts';
-        //         msg.data = invalidProducts;
-        //         return msg;
-        //     }
-
-        //     const rows = await this.retrieveIdAmount(products);
-        //     const idNotExist = await this.checkIdExists(products, rows);
-        //     if (idNotExist.length > 0) {
-        //         msg.status = 'errorProducts';
-        //         msg.data = idNotExist;
-        //         return msg;
-        //     };
-
-        //     const notAvailable = await this.checkAvailability(products, rows);
-        //     if (notAvailable.length > 0) {
-        //         msg.status = 'errorAvailability';
-        //         msg.data = notAvailable;
-        //         return msg;
-        //     };
-
         const orderID = await this.insertOrder(user, products)
         const orderInfo = await this.selectOrderInfo(orderID);
-        msg.data = orderInfo;
-        return msg;
+        return orderInfo;
     }
 };
+
 
 const ordersModel = new OrdersModel();
 module.exports = ordersModel;

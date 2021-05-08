@@ -1,4 +1,4 @@
-.logs.json
+.env
 node_modules/
 package.json
 package-lock.json
