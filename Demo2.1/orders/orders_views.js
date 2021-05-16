@@ -1,32 +1,24 @@
 const nodemailer = require("nodemailer");
-const fs = require('fs');
+const dotenv = require('dotenv').config({ path: __dirname + '/../.env' })
+
 
 class OrdersViews {
     messages = {
-        ok: { status: 'ok', data: [], message: 'Thank you for your order' }
-        // errorUser: { status: 'error', data: [], message: 'User info is not valid' },
-        // errorData: { status: 'error', data: [], message: 'Invalid order data' },
-        // errorProducts: { status: 'error', data: [], message: 'Products are not found' },
-        // errorAvailability: { status: 'error', data: [], message: 'Not enough products' }
+        ok: { success: true, data: [], message: 'Thank you for your order' }
     }
 
-    async sendData(res, info) {
-        const { status, data } = info;
-        // this.messages[`${status}`].data = data;
-        // this.messages.ok.data = [];
-        res.json(this.messages[`${status}`]);
-        
-        if (status === 'ok') {
-            await this.mainSendMail(res, info.data);
-        }
+    async sendData(res, data) {
+        res.json(this.messages.ok);
+        data.user.time = new Date(data.user.time).toLocaleString()
+        await this.mainSendMail(res, data);
     }
 
-    htmlText(info) {
-        const userTable = Object.values(info.user).reduce((acc, el) => {
+    htmlText(data) {
+        const userTable = Object.values(data.user).reduce((acc, el) => {
             return acc.concat(`<td> ${el} </td>`)
         }, '');
 
-        const orderTable = info.order.reduce((acc, product) => {
+        const orderTable = data.order.reduce((acc, product) => {
             const row = Object.values(product).reduce((accum, val) => {
                 return accum.concat(`<td> ${val} </td>`)
             }, '')
@@ -49,12 +41,11 @@ class OrdersViews {
                 <td> Amount: </td> <td> Units: </td> <td> Price: </td> <td> Price per Item: </td> </tr>
                 ${orderTable}
             </table>
-            <h2> <b> Total price : ${info.total} </b> </h2>`
+            <h2> <b> Total price : ${data.total} </b> </h2>`
         return text;
     }
 
-    async mainSendMail(res, orderInfo) {
-        const logs = JSON.parse(fs.readFileSync('./.logs.json', 'utf-8'));
+    async mainSendMail(res, data) {
 
         let transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -62,16 +53,16 @@ class OrdersViews {
             port: 465,
             secure: true,
             auth: {
-                user: logs.login,
-                pass: logs.password
+                user: process.env.GMAIL_LOGIN,
+                pass: process.env.GMAIL_PASSWORD
             }
         });
 
         let mailOptions = {
             from: `Lulu <heloiseroyard@gmail.com>`,
             to: 'valeriia.danylenko@hotmail.com',
-            subject: `New Order # ${orderInfo.order[0].order_id}`,
-            html: this.htmlText(orderInfo)
+            subject: `New Order # ${data.order[0].order_id}`,
+            html: this.htmlText(data)
         };
 
         transporter.sendMail(mailOptions, function (error, info) {

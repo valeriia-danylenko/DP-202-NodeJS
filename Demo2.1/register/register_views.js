@@ -1,6 +1,12 @@
 class RegisterViews {
-    async sendData(res, result) {
-        res.json(result);
+    messages = {
+        ok: {success: true, data: [], message: 'New user is created'}
+    }
+
+    async sendData(res, newUserId) {
+        if (newUserId) {
+            res.json(this.messages.ok);
+        }
     }
 };
 
