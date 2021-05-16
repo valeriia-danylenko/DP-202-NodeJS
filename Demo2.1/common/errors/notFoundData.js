@@ -1,4 +1,4 @@
-const BaseError = require('./base_error');
+const BaseError = require('./baseError');
 
 class NotFoundData extends BaseError {
     constructor(data, error) {

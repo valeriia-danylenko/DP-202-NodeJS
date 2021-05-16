@@ -16,6 +16,10 @@ class ProductsViews {
         switch (type) {
             case 'id':
                 throw new NotFoundData([{ 'id': id[0] }], this.messages.errorId);
+            // case 'search':
+            //     throw new CustomError(data, this.messages.errorProducts);
+            // case 'all':
+            //     throw new CustomError(data, this.messages.errorProducts);
             default:
                 throw new NotFoundData(data, this.messages.errorProducts);
         }

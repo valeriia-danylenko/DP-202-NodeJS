@@ -1,13 +1,13 @@
-const { Unit, Product, Order_item, User, Order, sequelize } = require('../db/models/index');
+const db = require('../db/models/index');
 const { Op } = require('sequelize');
-const { normalize, delExtra, normalizeOne, deleteKeys}  = require('../common/other/dataNormalization');
-const {pricePerItem, totalPrice} = require('../common/other/calculations');
 
 class OrdersModel {
 
     async retrieveIdAmount(products) {
         const ids = products.map(el => el.id);
-        const rawProducts = await Product.findAll({
+        const idQuery = `WHERE id IN ( ${ids.join(', ')} )`;
+
+        const rawProducts = await db.Product.findAll({
             attributes: ['id', 'amount'],
             where: {
                 id: {
@@ -15,7 +15,7 @@ class OrdersModel {
                 }
             }
         });
-        const foundProducts = normalize(rawProducts)
+        const foundProducts = rawProducts.map(p => p.dataValues)
         return foundProducts
     };
 
@@ -39,98 +39,110 @@ class OrdersModel {
 
 
     async findUserByPhone(phoneNum) {
-        const rawUser = await User.findAll({
+        const rawUser = await db.User.findAll({
             attributes: ['id', 'user_name', 'phone', 'password', 'email'],
             where: {
                 phone: phoneNum
             }
         });
-        const user = normalize(rawUser);
+        const user = rawUser.map(u => u.dataValues);
         return user;
     }
 
-    async inserOrderItems(products, id, t) {
+    async inserOrderItems(products, id) {
         const queryArr = products.reduce((acc, product) => {
-            acc.push({ order_id: id, product_id: product.id, amount: product.count })
+              acc.push({ order_id: id, product_id: product.id, amount: product.count })
             return acc;
         }, []);
-        await Order_item.bulkCreate(queryArr, { transaction: t });
+        await db.Order_item.bulkCreate(queryArr);
     }
 
 
-    async insertOrder(user, products, t) {
+    async insertOrder(user, products) {
         const { id } = user;
-        const order = await Order.create({
+        const order = await db.Order.create({
             user_id: id
-        }, { transaction: t });
+        });
         const orderID = order.dataValues.id
-        await this.inserOrderItems(products, orderID, t);
+        await this.inserOrderItems(products, orderID);
         return orderID;
 
     }
 
     async selectOrderInfo(orderID) {
 
-        const rawUser = await Order.findOne({
+        const user = await db.Order.findOne({
             attributes: [
+                [db.Sequelize.literal('"user"."user_name"'), 'user_name'],
+                [db.Sequelize.literal('"user"."phone"'), 'phone'],
+                [db.Sequelize.literal('"user"."email"'), 'email'],
                 'time'
             ],
             where: { id: orderID },
             include: [
                 {
-                    model: User,
+                    model: db.User,
                     as: 'user',
-                    attributes: ['user_name', 'phone', 'email']
+                    attributes: []
                 }
             ]
         });
 
-        let user = normalizeOne(rawUser, [{user: ['user_name', 'phone', 'email']}]);
-        user = deleteKeys(user, ['user'])
-
-        const rawOrder = await Order_item.findAll({
+        const rawOrder = await db.Order_item.findAll({
             attributes: [
                 'order_id',
                 'product_id',
+                [db.Sequelize.literal('product.name'), 'name'],
                 'amount',
+                [db.Sequelize.literal('"product->unit"."units"'), 'units'],
+                [db.Sequelize.literal('"product"."price"'), 'price'],
+                [db.Sequelize.literal('"product"."price" * order_item.amount'), 'total_per_item']
             ],
             where: { order_id: orderID },
             include: [
                 {
-                    model: Product,
+                    model: db.Product,
                     as: 'product',
-                    attributes: ['name', 'price'],
+                    attributes: [],
                     include: [
                         {
-                            model: Unit,
+                            model: db.Unit,
                             as: 'unit',
-                            attributes: ['unit']
+                            attributes: [],
                         }
                     ]
                 }
             ]
         });
+        const order = rawOrder.map(el => el.dataValues);
 
-        let order = normalize(rawOrder, [{ product: ['name', 'price', { unit: ['unit'] }] }]);
-        order = delExtra(order, ['product'])
-        order = pricePerItem(order);
+        const total = await db.Order_item.findOne({
+            attributes: [
+                [db.sequelize.fn('sum', db.Sequelize.literal('"product"."price" * order_item.amount')), 'total_amount']
+            ],
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: []
+                }
+            ],
+            group: ['order_id'],
+            having: { order_id: orderID }
+        });
 
         const orderInfo = {
-            'user': user, 
+            'user': user.dataValues,
             'order': order,
-            'total': totalPrice(order)
+            'total': total.dataValues.total_amount
         };
         return orderInfo
     }
 
     async completeOrder(user, products) {
-        let orderID;
-        const result = await sequelize.transaction(async (t) => {
-            orderID = await this.insertOrder(user, products, t)
-        });
+        const orderID = await this.insertOrder(user, products)
         const orderInfo = await this.selectOrderInfo(orderID);
         return orderInfo;
-
     }
 };
 
