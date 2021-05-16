@@ -1,4 +1,4 @@
-const { User } = require('../db/models/index');
+const db = require('../db/models/index');
 const ordersModel = require('../orders/ordersModel');
 const Forbidden = require('../common/errors/forbidden');
 
@@ -18,13 +18,13 @@ class RegisterModel {
         if (!email) {
             email = null;
         }
-        const newUser = await User.create({
+        const newUser = await db.User.create({
             user_name: name,
             phone,
             password,
             email
         });
-        return newUser.dataValues.id
+         return newUser.dataValues.id
     }
 };
 

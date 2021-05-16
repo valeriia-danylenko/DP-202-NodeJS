@@ -1,5 +1,5 @@
-const ordersModel = require('../../orders/orders_model');
-const NotFoundData = require('../errors/not_found_data');
+const ordersModel = require('../../orders/ordersModel');
+const NotFoundData = require('../errors/notFoundData');
 const Forbbiden = require('../errors/forbidden');
 
 

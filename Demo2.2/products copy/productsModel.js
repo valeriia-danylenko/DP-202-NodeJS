@@ -1,6 +1,5 @@
-const { Product, Manufacture, Unit, Category } = require('../db/models/index');
+const db = require('../db/models/index');
 const { Op } = require("sequelize");
-const { normalize } = require('../common/other/dataNormalization');
 
 class ProductsModel {
     createWhereQuery(query) {
@@ -16,7 +15,7 @@ class ProductsModel {
                 queryArr.push({ name: { [Op.iLike]: `%${products}%` } });
             }
             if (manufactures) {
-                queryArr.push({ '$manufacture.manufacture$': { [Op.iLike]: `%${manufactures}%` } });
+                queryArr.push({ '$Manufacture.manufacture$': { [Op.iLike]: `%${manufactures}%` } });
             };
             const whereQuery = { [Op.and]: queryArr };
             return whereQuery;
@@ -25,41 +24,47 @@ class ProductsModel {
 
     async selectProducts(query) {
         const whereQuery = this.createWhereQuery(query);
-        const rawProducts = await Product.findAll({
+        const rawProducts = await db.Product.findAll({
             attributes: [
                 'id',
                 'name',
+                // [db.Sequelize.literal('manufacture.manufacture'), 'manufactures'],
+                // [db.Sequelize.literal('category.category'), 'categories'],
+                // [db.Sequelize.literal('unit.units'), 'units'],
                 'price',
                 'img_link'
             ],
             where: whereQuery,
             include: [
                 {
-                    model: Category,
-                    as: 'category',
+                    model: db.Category,
+                    // as: 'Category',
                     attributes: ['category']
                 },
                 {
-                    model: Manufacture,
-                    as: 'manufacture',
+                    model: db.Manufacture,
+                    // as: 'manufacture',
                     attributes: ['manufacture']
                 },
                 {
-                    model: Unit,
-                    as: 'unit',
-                    attributes: ['unit']
+                    model: db.Unit,
+                    // as: 'unit',
+                    attributes: ['units']
                 }
             ]
         })
-        const products = await normalize(rawProducts, [{category: ['category']}, {manufacture: ['manufacture']}, {unit: ['unit']}]);
+        const products = rawProducts.map(product => product.dataValues);
         return products;
     };
 
     async selectProductDetails(id) {
-        const rawProduct = await Product.findAll({ //used findAll to get an empty array if id doesn't exist
+        const rawProduct = await db.Product.findAll({ //used findAll to get an empty array if id doesn't exist
             attributes: [
                 'id',
                 'name',
+                // [db.Sequelize.literal('manufacture.manufacture'), 'manufactures'],
+                // [db.Sequelize.literal('category.category'), 'categories'],
+                // [db.Sequelize.literal('unit.units'), 'units'],
                 'ingridients',
                 'price',
                 'img_link'
@@ -67,23 +72,23 @@ class ProductsModel {
             where: { id: id },
             include: [
                 {
-                    model: Category,
-                    as: 'category',
+                    model: db.Category,
+                    // as: 'Category',
                     attributes: ['category']
                 },
                 {
-                    model: Manufacture,
-                    as: 'manufacture',
+                    model: db.Manufacture,
+                    // as: 'manufacture',
                     attributes: ['manufacture']
                 },
                 {
-                    model: Unit,
-                    as: 'unit',
-                    attributes: ['unit']
+                    model: db.Unit,
+                    // as: 'unit',
+                    attributes: ['units']
                 }
             ]
         });
-        const product = await normalize(rawProducts, [{category: ['category']}, {manufacture: ['manufacture']}, {unit: ['unit']}]);
+        const product = rawProduct.map(product => product.dataValues);
         return product;
     };
 };
